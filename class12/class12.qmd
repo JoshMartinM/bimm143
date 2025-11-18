@@ -1,0 +1,234 @@
+---
+title: "class12"
+author: "Joshua Martin (PID: A18545389)"
+format: pdf
+toc: true
+---
+
+## Background
+Today we will analyze some RNASeq data from Himes et al. on the effects of a common steroid (dexamethasone) on airway smooth muscle cells (ASM cells).
+
+Our starting point is the "counts" data and "metadata" that contain the count values for each gene in their different experiment (i.e. cell lines with or without the drug).
+
+## Data import
+
+```{r}
+# Complete the missing code
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+```
+
+Let's have a wee peak at these objects:
+```{r}
+head(counts)
+```
+
+> Q. How many genes are in this dataset?
+
+```{r}
+nrow(counts)
+```
+
+```{r}
+metadata
+```
+
+```{r}
+ncol(counts)
+```
+
+```{r}
+nrow(counts)
+```
+
+> Q2. How many ‘control’ cell lines do we have? 
+
+```{r}
+metadata$dex == "control"
+sum(metadata$dex == "control")
+```
+
+## Toy differential gene expression
+
+To start our analysis let's calculate the mean counts for all genes in the "control" experiments.
+
+1. Extract all "control" columns for the `counts` object
+2. Calculate the mean for lal rows (i.e. genes) of these "control" columns
+
+3-4. Do the same for "treated" 
+5. Compare these `control.mean` and `treated.mean` values.
+
+```{r}
+control.inds <- metadata$dex == "control"
+control.counts <- counts[ , control.inds]
+head(control.counts)
+control.means <- rowSums( control.counts )/4 
+head(control.means)
+```
+>Q3. How would you make the above code in either approach more robust? Is there a function that could help here? 
+
+use rowMeans instead of dividing by 4 after setting by group size.
+
+control.mean <- rowMeans(counts[, metadata$dex == "control", drop = FALSE])
+treated.mean <- rowMeans(counts[, metadata$dex == "treated", drop = FALSE])sd
+
+```{r}
+treated.inds <- metadata$dex == "treated"
+
+treated.counts <- counts[ , treated.inds]
+
+treated.means <- rowMeans(treated.counts)
+```
+
+Store these together for ease of bookkeeping as `meancounts`
+
+```{r}
+meancounts <- data.frame(control.means, treated.means)
+head(meancounts)
+```
+
+```{r}
+plot(meancounts[,1],meancounts[,2], xlab="Control", ylab="Treated")
+```
+
+Make this a log log plot
+```{r}
+plot(meancounts, log="xy")
+```
+
+We often talk metrics liike "log2 fold-change"
+
+```{r}
+# control/treated
+log2(10/10)
+```
+
+```{r}
+log2(10/20)
+```
+
+```{r}
+log2(20/10)
+```
+
+```{r}
+log2(10/40)
+```
+
+```{r}
+zero.vals <- which(meancounts[,1:2] == 0, arr.ind = TRUE)
+to.rm <- unique(zero.vals[,1])
+mycounts <- meancounts[-to.rm, ]
+```
+
+> What is the purpose of the arr.ind argument in the which() function call above? Why would we then take the first column of the output and need to call the unique() function?
+
+returns both the row and column positions of zeros. we take the row first column to remove genes with any zero counts, and unique() prevents removing the same row multiple times.
+
+Let's calculate the log2 fold change for our treated over control mean counts.
+
+```{r}
+meancounts$log2fc <- 
+log2(meancounts$treated.means / 
+       meancounts$control.means)
+```
+
+```{r}
+head(meancounts)
+```
+
+A common "rule of thumb" is a log2 fold change of +2 and -2 to call genes "Up regulated" or "Down regulated".
+
+```{r}
+sum(meancounts$log2fc > +2, na.rm=T)
+```
+
+Number of "down" genes at -2 threshold
+```{r}
+sum(meancounts$log2fc <= -2, na.rm=T)
+```
+
+The above data is missing a statistical significance test.
+
+
+up.ind <- mycounts$log2fc > 2
+down.ind <- mycounts$log2fc < (-2)
+## DESeq2 analysis
+```{r}
+up.ind <- mycounts$log2fc > 2
+down.ind <- mycounts$log2fc < (-2)
+```
+
+> Q8. Using the up.ind vector above can you determine how many up regulated genes we have at the greater than 2 fc level? 
+
+```{r}
+sum(mycounts$log2fc > 2, na.rm = TRUE)
+```
+
+> Q9. Using the down.ind vector above can you determine how many down regulated genes we have at the greater than 2 fc level? 
+
+```{r}
+sum(mycounts$log2fc < -2, na.rm = TRUE)
+```
+
+> 10. Do you trust these results? Why or why not?
+
+No. they are calculated from unnormalized mean counts and not accounting for variance, may include false positives/negativs.
+
+Let's do this analysis properly and keep our inner stats nerd happy = i.e. are the differences we see between drug and no drug statistically significant given the replicate experiments?
+
+```{r, message=FALSE}
+library(DESeq2)
+```
+
+For DESeq analysis we need three things
+
+- count values (`contData`)
+- metadata telling us about the columns in `countData` (`colData`)
+
+Our first function from DESeq 2 will setup the input required for analysis by storing all these 3 things together.
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = metadata,
+                              design = ~dex)
+```
+
+The main function in DESeq2 that runs the analysis is called `DESeq()`
+
+```{r}
+dds <- DESeq(dds)
+```
+```{r}
+results(dds)
+```
+
+```{r}
+36000 * 0.05
+```
+
+## Volcano Plot
+
+
+```{r}
+res <- results(dds)
+head(res)
+```
+
+This is a common summary result figure from these types of experiments and plot the log2 fold-change vs the adjusted p-value
+
+```{r}
+plot(res$log2FoldChange, res$padj)
+```
+```{r}
+ plot( res$log2FoldChange,  -log(res$padj))
+abline(v=c(-2,2), col="red")
+abline(h=-log(0.04), col="red")
+```
+
+## Save our results
+
+```{r}
+write.csv(res, file="my_results.csv")
+```
+
