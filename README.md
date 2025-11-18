@@ -1,2 +1,2 @@
 # bimm143
-Classwork for BIMM143 at UCSD
+Classwork for BIMM143 at UC San Diego
