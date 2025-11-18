@@ -1,0 +1,147 @@
+---
+title: "class06"
+author: "Joshua Martin (PID: A18545389)"
+format: pdf
+---
+
+All functions in R have at least 3 things:
+- A **name**, we pick this and use it to call the function.
+- Input **arguments**, there can be multiple comma separated inputs to the function.
+- The **body**, lines of R code that do the work of the function.
+
+Our first wee function:
+
+```{r}
+add <- function(x, y=1) {
+  x + y
+}
+```
+
+Let's test our function
+
+```{r}
+add(c(1,2,3), y=10)
+```
+
+```{r}
+add(10, 100)
+```
+
+## A second function
+
+Let's try something more interesting. Make a sequence generation tool.
+
+The 'sample()' function could be useful here.
+
+```{r}
+sample(1:10, size = 3)
+```
+
+Change this to work with the nucleotides A C G and T and return 3 of them
+
+```{r}
+n <- c("A","C","G","T")
+sample(n, size=15, replace = TRUE)
+```
+
+Turn this snippet into a function that returns a user specified length dna sequence. Let's call it 'generate_dna()'...
+
+```{r}
+generate_dna <- function(len=10) {
+  n <- c("A","C","G","T")
+  v <- sample(n, size=len, replace = TRUE)
+  cat("Well done you!")
+  return(v)
+}
+```
+
+```{r}
+generate_dna(5)
+```
+
+
+```{r}
+s <- generate_dna(15)
+s
+```
+
+I want the option to return a single element character vector with my sequence all together like this: "GGAGTAC"
+
+```{r}
+lookatme <- function(len = 10, as_string = FALSE) {
+  n <- c("A", "C", "G", "T")
+  v <- sample(n, size = len, replace = TRUE)
+  cat("Well done you!\n")
+  
+  if (as_string) {
+    # Return a single character string, e.g., "GGAGTAC"
+    paste(v, collapse = "")
+  } else {
+    # Return a character vector of individual bases
+    v
+  }
+}
+```
+
+```{r}
+lookatme(5)
+
+lookatme(7, as_string = TRUE)
+```
+Make a third function that generates protein sequence of a user specified length and format.
+
+```{r}
+generate_protein <- function(len = 15, fasta = TRUE) {
+  # 20 standard amino‑acid single‑letter codes
+  aa <- c(
+    "A","R","N","D","C","E","Q","G","H","I",
+    "L","K","M","F","P","S","T","W","Y","V"
+  )
+  
+  # Randomly sample with replacement
+  seq_vec <- sample(aa, size = len, replace = TRUE)
+  cat("Protein sequence generated!\n")
+  
+  if (fasta) {
+    # Return a single character string, e.g., "MKTFLV..."
+    paste(seq_vec, collapse = "")
+  } else {
+    # Return a character vector of individual residues
+    seq_vec
+  }
+}
+```
+
+```{r}
+generate_protein(10)
+```
+
+> Q. Generate random protein sequences between length 5 and 12 amino-acids.
+
+```{r}
+generate_protein(5)
+generate_protein(6)
+```
+
+Once approach is to do this by brute force calling our function for each length 5 to 12.
+
+Another approach is to write a 'for()' loop to itterate over the input valued 5 to 12
+
+A very useful third R specific approach is to use the 'sapply()' function
+
+```{r}
+seq_lengths <- 6:12
+for (i in seq_lengths) {
+  cat(i, "\n")
+  cat( generate_protein(i))
+  cat("\n")
+}
+```
+
+```{r}
+protein_sapply <- sapply(5:12, generate_protein)
+
+protein_sapply
+```
+
+> **Key-Point**: Writing functions in R is doable but not the easiest thing in the world. Starting with a working snippet of code and then using LLM tools to improve and generalize your function code is a productive approach.

@@ -1,0 +1,223 @@
+---
+title: "class07"
+author: "Joshua Martin (PID: A18545389)"
+format: pdf
+---
+
+Today we will explore some fundamental machine learning methods including clustering and dimensionality reduction.
+
+## K-means clustering
+
+To see how this works let's first makeup some data to cluster where we know what the answer should be. We can use the `rnorm()` function to help here:
+
+```{r}
+hist( rnorm(500, mean=5))
+```
+
+```{r}
+x <- c( rnorm(30, mean=-3), rnorm(30,mean=3))
+y <- rev(x)
+```
+
+```{r}
+x <- cbind(x,y)
+plot(x)
+```
+
+The function for K-means clustering in "base" R is `kmeans()`
+
+```{r}
+k <- kmeans(x, centers = 2)
+k
+```
+
+To get at the results of the returned list object we can use the dollar `$` syntax
+
+> Q. How many points are in each cluster?
+
+```{r}
+k$size
+```
+
+> Q. What `component` of your result object details
+      - cluster assignment/membership?
+      - cluster center?
+      
+```{r}
+head(k$cluster)
+k$centers
+```
+
+> Q. Make a clustering results figure of the data colored by cluster membership.
+
+```{r}
+plot(x, col=k$cluster, pch=16)
+points(k$centers, col="blue", pch=15, cex=2)
+```
+
+K-means clustering is very popular as it is very fast and relatively straight forward: it takes numeric data input and returns the cluster membership vector etc.
+
+The "issue" is we tell `kmeans()` how many clusters we want!
+
+> Q. Run kmeans again and cluster into 4 grps/clusters and plot the results like we did above?
+
+```{r}
+k4 <- kmeans(x, centers = 4)
+k4
+k4$size
+plot(x, col = k4$cluster, pch = 16)
+
+points(k4$centers, col="blue", pch = 15, cex = 2)
+```
+
+> Q. Generate a scree plot.
+
+```{r}
+# Basic scree plot
+wss <- numeric(10)
+
+for (k in 1:10) {
+  wss[k] <- kmeans(x, centers = k)$tot.withinss
+}
+
+plot(1:10, wss, type = "b",
+     xlab = "Number of clusters (k)",
+     ylab = "Total within-cluster sum of squares",
+     main = "Scree Plot")
+```
+
+## Hierarchical Clustering
+
+The main "base" R function for Hierarchical Clustering is called `hclust()`. Here we can't just input our data we need to first calculate a distance matrix (e.g., `dist()`) for our data and use this as input to `hclust()`
+
+```{r}
+d <- dist(x)
+hc <- hclust(d)
+hc
+```
+
+There is a plot method for hclust results lets try it
+
+```{r}
+plot(hc)
+abline(h=10, col="red")
+```
+
+To get our cluster "membership" vector (i.e. our main clustering result) we can "cut" the tree at a given height or at a height that yields a given "k" groups.
+```{r}
+cutree(hc, h=10)
+```
+
+```{r}
+grps <- cutree(hc, k=2)
+```
+
+> Q. Plot the data with our hclust result coloring
+
+```{r}
+plot(x, col=grps)
+```
+
+# Principal Component Analysis (PCA)
+
+## PCA of UK food data
+
+```{r}
+url <- "https://tinyurl.com/UK-foods"
+x <- read.csv(url)
+head(x)
+```
+
+```{r}
+rownames(x) <- x[,1]
+x <- x[,-1]
+x
+```
+
+```{r}
+x <- read.csv("UK_foods.csv")
+```
+
+> Q1. How many rows and columns are in your new data frame named x? What R functions could you use to answer this questions?
+
+```{r}
+head(x)
+```
+
+```{r}
+dim(x)
+```
+
+
+```{r}
+rownames(x) <- x[,1]
+x <- x[,-1]
+```
+
+```{r}
+dim(x)
+head(x)
+```
+
+> Q2. Which approach to solving the ‘row-names problem’ mentioned above do you prefer and why? Is one approach more robust than another under certain circumstances?
+
+I prefer using row.names=1 argument in read.csv() when importing the data. More robust, cleaner.
+
+```{r}
+barplot(as.matrix(x), beside=T, col=rainbow(nrow(x)))
+
+```
+
+> Q3.Changing what optional argument in the above barplot() function results in the following plot?
+bedside=FALSE
+
+```{r}
+barplot(as.matrix(x), beside = FALSE, col = rainbow(nrow(x)))
+```
+
+> Q4. Generating all pairwise plots may help somewhat. Can you make sense of the following code and resulting figure? What does it mean if a given point lies on the diagonal for a given plot?
+
+If a point lies on the diagonal, it means that food is consumed equally in both countries and their values are similar or the same.
+
+```{r}
+pairs(x, col=rainbow(10), pch=16)
+```
+
+
+
+> Main point: It can be difficult to spot major trends and patters even in relatively small multivariate datasets (here we only have 17 dimensions, typically we have 1000s)
+
+## PCA to the rescue
+
+The main function in "base" R for PCA is called `prcomp()`
+
+I will take the transpose of our data so the "foods" are in the columns:
+
+```{r}
+pca <- prcomp( t(x) )
+summary(pca)
+```
+
+```{r}
+pca$x
+cols <- c("orange", "red", "blue", "darkgreen")
+plot(pca$x[,1], pca$x[,2], col=cols, pch=16)
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(pca$x) + 
+  aes(PC1, PC2) +
+  geom_point(col=cols)
+```
+
+```{r}
+ggplot(pca$rotation) +
+  aes(PC1, rownames(pca$rotation)) +
+  geom_col()
+```
+
+PCA looks super useful and will come back to describe this further next day :-)
